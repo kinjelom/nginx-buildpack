@@ -44,7 +44,11 @@ func main() {
 		os.Exit(13)
 	}
 
-	supplier := supply.New(stager, manifest, installer, logger, &libbuildpack.Command{})
+	configFileName := os.Getenv("NGINX_CONF_FILENAME")
+	if configFileName == "" {
+		configFileName = "nginx.conf"
+	}
+	supplier := supply.New(stager, manifest, installer, logger, configFileName, &libbuildpack.Command{})
 
 	if err := supplier.Run(); err != nil {
 		os.Exit(14)

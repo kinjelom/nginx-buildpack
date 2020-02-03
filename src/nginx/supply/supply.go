@@ -56,22 +56,24 @@ type NginxConfig struct {
 }
 
 type Supplier struct {
-	Stager       Stager
-	Manifest     Manifest
-	Installer    Installer
-	Log          *libbuildpack.Logger
-	Config       Config
-	Command      Command
-	VersionLines map[string]string
+	Stager         Stager
+	Manifest       Manifest
+	Installer      Installer
+	Log            *libbuildpack.Logger
+	ConfigFileName string
+	Config         Config
+	Command        Command
+	VersionLines   map[string]string
 }
 
-func New(stager Stager, manifest Manifest, installer Installer, logger *libbuildpack.Logger, command Command) *Supplier {
+func New(stager Stager, manifest Manifest, installer Installer, logger *libbuildpack.Logger, configFileName string, command Command) *Supplier {
 	return &Supplier{
-		Stager:    stager,
-		Manifest:  manifest,
-		Installer: installer,
-		Log:       logger,
-		Command:   command,
+		Stager:         stager,
+		Manifest:       manifest,
+		Installer:      installer,
+		Log:            logger,
+		ConfigFileName: configFileName,
+		Command:        command,
 	}
 }
 
@@ -101,7 +103,7 @@ func (s *Supplier) Run() error {
 	}
 
 	if err := s.ValidateNginxConf(); err != nil {
-		s.Log.Error("Could not validate nginx.conf: %s", err.Error())
+		s.Log.Error("Could not validate %s: %s", s.ConfigFileName, err.Error())
 		return err
 	}
 
@@ -173,7 +175,7 @@ func (s *Supplier) ValidateNginxConf() error {
 }
 
 func (s *Supplier) CheckAccessLogging() error {
-	contents, err := ioutil.ReadFile(filepath.Join(s.Stager.BuildDir(), "nginx.conf"))
+	contents, err := ioutil.ReadFile(filepath.Join(s.Stager.BuildDir(), s.ConfigFileName))
 	if err != nil {
 		return err
 	}
@@ -184,7 +186,7 @@ func (s *Supplier) CheckAccessLogging() error {
 	}
 
 	if !strings.Contains(string(contents), "access_log") || isSetToOff {
-		s.Log.Warning("Warning: access logging is turned off in your nginx.conf file, this may make your app difficult to debug.")
+		s.Log.Warning("Warning: access logging is turned off in your %s file, this may make your app difficult to debug.", s.ConfigFileName)
 	}
 
 	return nil
@@ -231,7 +233,7 @@ func (s *Supplier) InstallOpenResty() error {
 }
 
 func (s *Supplier) validateNginxConfHasPort() error {
-	conf, err := ioutil.ReadFile(filepath.Join(s.Stager.BuildDir(), "nginx.conf"))
+	conf, err := ioutil.ReadFile(filepath.Join(s.Stager.BuildDir(), s.ConfigFileName))
 	if err != nil {
 		return err
 	}
@@ -286,8 +288,8 @@ func (s *Supplier) validateNginxConfHasPort() error {
 	}
 
 	if !strings.Contains(string(contents), randString) {
-		s.Log.Error("nginx.conf file must be configured to respect the value of `{{port}}`")
-		return errors.New("no {{port}} in nginx.conf")
+		s.Log.Error("%s file must be configured to respect the value of `{{port}}`", s.ConfigFileName)
+		return errors.New(fmt.Sprintf("no {{port}} in %s", s.ConfigFileName))
 	}
 
 	return nil
@@ -315,10 +317,10 @@ func (s *Supplier) validateNGINXConfSyntax() error {
 	defer os.RemoveAll(tmpConfDir)
 
 	if err := libbuildpack.CopyDirectory(s.Stager.BuildDir(), tmpConfDir); err != nil {
-		return fmt.Errorf("Error copying nginx.conf: %s", err.Error())
+		return fmt.Errorf("Error copying %s: %s", s.ConfigFileName, err.Error())
 	}
 
-	nginxConfPath := filepath.Join(tmpConfDir, "nginx.conf")
+	nginxConfPath := filepath.Join(tmpConfDir, s.ConfigFileName)
 	localModulePath := filepath.Join(s.Stager.BuildDir(), "modules")
 	globalModulePath := filepath.Join(s.Stager.DepDir(), "nginx", "modules")
 	buildpackYMLPath := filepath.Join(s.Stager.BuildDir(), "buildpack.yml")
@@ -342,7 +344,7 @@ func (s *Supplier) validateNGINXConfSyntax() error {
 	}
 	if err := s.Command.Run(cmd); err != nil {
 		_, _ = fmt.Fprint(os.Stderr, nginxErr.String())
-		return fmt.Errorf("nginx.conf contains syntax errors: %s", err.Error())
+		return fmt.Errorf("%s contains syntax errors: %s", s.ConfigFileName, err.Error())
 	}
 
 	return nil

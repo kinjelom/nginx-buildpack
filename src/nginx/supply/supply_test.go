@@ -42,7 +42,7 @@ var _ = Describe("Supply", func() {
 		depDir, err = ioutil.TempDir("", "nginx.depdir")
 		Expect(err).ToNot(HaveOccurred())
 		mockStager.EXPECT().DepDir().AnyTimes().Return(depDir)
-		supplier = supply.New(mockStager, mockManifest, mockInstaller, logger, mockCommand)
+		supplier = supply.New(mockStager, mockManifest, mockInstaller, logger, "mginx.conf", mockCommand)
 	})
 
 	AfterEach(func() {
