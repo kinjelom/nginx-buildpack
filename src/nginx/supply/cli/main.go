@@ -47,7 +47,6 @@ func main() {
 	configFileName := os.Getenv("NGINX_CONF_FILENAME")
 	if configFileName == "" {
 		configFileName = "nginx.conf"
-		logger.Info("Default NGINX config file name: %s", configFileName)
 	} else {
 		logger.Info("Custom NGINX config file name: %s", configFileName)
 	}
