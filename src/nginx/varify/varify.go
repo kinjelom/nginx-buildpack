@@ -40,12 +40,15 @@ func main() {
 	if len(flag.Args()) > 4 && len(flag.Args()[4]) > 0 {
 		defaultNameServer = flag.Args()[4]
 	}
+	log.Printf("defaultNameServer: '%s' ", defaultNameServer)
+
 	nameServers, err := readNameServers(resolvConfPath, defaultNameServer)
 	if err != nil {
 		nameServers = []string{defaultNameServer}
 		log.Printf("Could not open %s file for reading. "+
 			"The default nameservers %s will be used. Error: %s", resolvConfPath, defaultNameServer, err)
 	}
+	log.Printf("Nameservers: %s ", nameServers)
 
 	body, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -118,8 +121,13 @@ func readNameServers(resolvConfPath string, defaultNameServer string) ([]string,
 	result := []string{defaultNameServer}
 
 	config, err := dns.ClientConfigFromFile(resolvConfPath)
+	if config != nil {
+		log.Printf("config.Servers: %s ", config.Servers)
+	} else {
+		log.Printf("config is nil!")
+	}
 	if err != nil {
-		return []string{}, err
+		return result, err
 	}
 
 	if len(config.Servers) > 0 {
